@@ -51,12 +51,13 @@ const filteredItems = computed(() => {
 
 const stats = computed(() => {
   const total = items.value.length;
-  const available = items.value.filter(item => item.available).length;
+  const available = items.value.filter(item => item.available >= 1).length;
   
   // Calculate avg price for filtered items
-  const visibleItems = filteredItems.value;
-  const sumPrice = visibleItems.reduce((acc, item) => acc + item.price, 0);
-  const avgPrice = visibleItems.length > 0 ? (sumPrice / visibleItems.length) : 0;
+  const visibleAndAvailable = filteredItems.value.filter(item => item.available >= 1);
+  
+  const sumPrice = visibleAndAvailable.reduce((acc, item) => acc + item.price, 0);
+  const avgPrice = visibleAndAvailable.length > 0 ? (sumPrice / visibleAndAvailable.length) : 0;
   
   return { total, available, avgPrice };
 });

@@ -46,7 +46,6 @@ h1, h2, h3 {
   letter-spacing: -0.025em;
 }
 
-/* Scrollbar styling */
 ::-webkit-scrollbar {
   width: 8px;
 }
@@ -64,7 +63,6 @@ h1, h2, h3 {
   background: #475569;
 }
 
-/* Animations */
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(10px); }
   to { opacity: 1; transform: translateY(0); }

@@ -16,7 +16,7 @@ const submitForm = () => {
     name: name.value,
     price: parseFloat(price.value),
     category: category.value,
-    available: available.value
+    available: parseInt(available.value)
   };
 
   emit('add-item', newItem);
@@ -25,7 +25,7 @@ const submitForm = () => {
   name.value = '';
   price.value = 0;
   category.value = 'Lanche';
-  available.value = true;
+  available.value = 1;
 };
 </script>
 
@@ -49,12 +49,17 @@ const submitForm = () => {
           <option value="Sobremesa">Sobremesa</option>
         </select>
       </div>
-      <div class="input-group checkbox">
-        <label class="switch">
-          <input type="checkbox" v-model="available" />
-          <span class="slider round"></span>
-        </label>
-        <span class="label-text">Disponível</span>
+      <div class="input-group">
+        <label for="available">Quantidade em estoque</label>
+        <input 
+          v-model.number="available" 
+          type="number" 
+          id="available" 
+          min="0" 
+          max="1000" 
+          placeholder="1"
+          required 
+        />
       </div>
     </div>
     <button type="submit" class="btn-primary">Adicionar ao Cardápio</button>
