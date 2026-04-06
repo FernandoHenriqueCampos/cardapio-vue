@@ -39,7 +39,7 @@ const submitForm = () => {
       </div>
       <div class="input-group">
         <label for="price">Preço (R$)</label>
-        <input v-model.number="price" type="number" id="price" step="0.01" min="0" required />
+        <input v-model.number="price" type="number" id="price" step="0.1" min="0" max="1000" required />
       </div>
       <div class="input-group">
         <label for="category">Categoria</label>

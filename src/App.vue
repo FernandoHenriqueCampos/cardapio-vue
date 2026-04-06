@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue';
+import { ref, computed, nextTick, onMounted, onBeforeUnmount, watch } from 'vue';
 import ItemForm from './components/ItemForm.vue';
 import MenuCard from './components/MenuCard.vue';
 import FilterBar from './components/FilterBar.vue';
@@ -8,6 +8,14 @@ import StatsBar from './components/StatsBar.vue';
 // State
 const items = ref([]);
 const activeCategory = ref('Todas');
+const PREVIEW_LIMIT = 4;
+const showMoreItems = ref(false);
+const sidebarRef = ref(null);
+const previewGridRef = ref(null);
+const contentHeaderRef = ref(null);
+const filterNavRef = ref(null);
+const previewCardHeight = ref(220);
+let resizeObserver = null;
 
 // Load initial data or from localStorage
 onMounted(() => {
@@ -49,9 +57,32 @@ const filteredItems = computed(() => {
   return items.value.filter(item => item.category === activeCategory.value);
 });
 
+const previewItems = computed(() => filteredItems.value.slice(0, PREVIEW_LIMIT));
+const extraItems = computed(() => filteredItems.value.slice(PREVIEW_LIMIT));
+const hasExtraItems = computed(() => extraItems.value.length > 0);
+const visibleExtraItems = computed(() => (showMoreItems.value ? extraItems.value : []));
+
+const filteredSummary = computed(() => {
+  const count = filteredItems.value.length;
+  const itemLabel = count === 1 ? 'item encontrado' : 'itens encontrados';
+  const categoryLabel = activeCategory.value === 'Todas'
+    ? 'todas as categorias'
+    : `categoria ${activeCategory.value}`;
+
+  return `${count} ${itemLabel} em ${categoryLabel}.`;
+});
+
 const stats = computed(() => {
   const total = items.value.length;
   const available = items.value.filter(item => item.available >= 1).length;
+  const totalStock = items.value.reduce((acc, item) => {
+    if (typeof item.available === 'boolean') {
+      return acc + (item.available ? 1 : 0);
+    }
+
+    const stock = Number(item.available);
+    return acc + (Number.isFinite(stock) && stock > 0 ? Math.floor(stock) : 0);
+  }, 0);
   
   // Calculate avg price for filtered items
   const visibleAndAvailable = filteredItems.value.filter(item => item.available >= 1);
@@ -59,13 +90,75 @@ const stats = computed(() => {
   const sumPrice = visibleAndAvailable.reduce((acc, item) => acc + item.price, 0);
   const avgPrice = visibleAndAvailable.length > 0 ? (sumPrice / visibleAndAvailable.length) : 0;
   
-  return { total, available, avgPrice };
+  return { total, available, totalStock, avgPrice };
+});
+
+const updatePreviewHeight = () => {
+  if (!sidebarRef.value || !previewGridRef.value) return;
+
+  const formElement = sidebarRef.value.querySelector('.item-form');
+  const sidebarRect = sidebarRef.value.getBoundingClientRect();
+  const formRect = formElement?.getBoundingClientRect();
+  const previewRect = previewGridRef.value.getBoundingClientRect();
+  const gridWidth = previewGridRef.value.clientWidth;
+  const cardCount = previewItems.value.length;
+  const cardMinWidth = 280;
+  const gridGap = 32;
+  const columns = Math.max(1, Math.floor((gridWidth + gridGap) / (cardMinWidth + gridGap)));
+  const rows = Math.max(1, Math.ceil(cardCount / columns));
+  const referenceBottom = formRect?.bottom ?? sidebarRect.bottom;
+  const availableGridHeight = Math.max(180, referenceBottom - previewRect.top);
+  const computedHeight = Math.floor((availableGridHeight - (rows - 1) * gridGap) / rows);
+  const sampleCard = previewGridRef.value.querySelector('.menu-card');
+  const minCardHeight = sampleCard ? sampleCard.scrollHeight + 4 : 180;
+
+  previewCardHeight.value = Math.max(minCardHeight, computedHeight);
+};
+
+const toggleMoreItems = () => {
+  showMoreItems.value = !showMoreItems.value;
+};
+
+onMounted(() => {
+  nextTick(updatePreviewHeight);
+
+  resizeObserver = new ResizeObserver(() => {
+    updatePreviewHeight();
+  });
+
+  if (sidebarRef.value) resizeObserver.observe(sidebarRef.value);
+  if (previewGridRef.value) resizeObserver.observe(previewGridRef.value);
+  if (contentHeaderRef.value) resizeObserver.observe(contentHeaderRef.value);
+  if (filterNavRef.value) resizeObserver.observe(filterNavRef.value);
+});
+
+onBeforeUnmount(() => {
+  if (resizeObserver) {
+    resizeObserver.disconnect();
+    resizeObserver = null;
+  }
+});
+
+watch(filteredItems, () => {
+  showMoreItems.value = false;
+  nextTick(updatePreviewHeight);
 });
 </script>
 
 <template>
   <div class="app-wrapper">
-    <header class="hero glass">
+    <header class="site-header">
+      <div class="container nav-shell">
+        <a href="#inicio" class="brand">Cardápio Digital</a>
+        <nav class="main-nav" aria-label="Navegação principal">
+          <a href="#resumo">Resumo</a>
+          <a href="#cadastro">Cadastro</a>
+          <a href="#catalogo">Cardápio</a>
+        </nav>
+      </div>
+    </header>
+
+    <section id="inicio" class="hero-section glass">
       <div class="hero-content container">
         <div class="title-section fade-in">
           <span class="badge">Premium Menu</span>
@@ -73,32 +166,72 @@ const stats = computed(() => {
           <p>Gerencie sua experiência gastronômica com facilidade.</p>
         </div>
       </div>
-    </header>
+    </section>
 
-    <main class="container">
+    <main class="container main-content">
+      <section id="resumo" class="stats-section" aria-labelledby="stats-title">
+        <h2 id="stats-title" class="sr-only">Resumo do cardápio</h2>
+        <StatsBar :stats="stats" />
+      </section>
+
       <div class="main-grid">
-        <aside class="sidebar">
+        <aside id="cadastro" ref="sidebarRef" class="sidebar" aria-label="Cadastro de itens">
           <ItemForm @add-item="addItem" />
-          <StatsBar :stats="stats" />
         </aside>
 
-        <section class="content-area">
-          <FilterBar :active-category="activeCategory" @update-category="updateCategory" />
+        <section id="catalogo" class="content-area" aria-labelledby="catalog-title">
+          <header ref="contentHeaderRef" class="content-header fade-in">
+            <h2 id="catalog-title">Itens do Cardápio</h2>
+            <p>{{ filteredSummary }}</p>
+          </header>
+
+          <nav ref="filterNavRef" class="filter-nav" aria-label="Filtrar itens por categoria">
+            <FilterBar :active-category="activeCategory" @update-category="updateCategory" />
+          </nav>
           
-          <div v-if="filteredItems.length > 0" class="menu-grid">
-            <MenuCard 
-              v-for="item in filteredItems" 
-              :key="item.id" 
-              :item="item"
-              @remove-item="removeItem"
-            />
-          </div>
-          
-          <div v-else class="empty-state glass fade-in">
+          <template v-if="filteredItems.length > 0">
+            <div
+              ref="previewGridRef"
+              class="menu-grid preview-grid"
+              role="list"
+              aria-label="Lista de itens do cardápio"
+              :style="{ '--preview-card-height': `${previewCardHeight}px` }"
+            >
+              <article v-for="item in previewItems" :key="item.id" class="menu-entry preview-entry" role="listitem">
+                <MenuCard
+                  :item="item"
+                  @remove-item="removeItem"
+                />
+              </article>
+            </div>
+
+          </template>
+
+          <section v-else class="empty-state glass fade-in" aria-live="polite">
             <div class="empty-icon">🍽️</div>
             <h3>Nenhum item encontrado</h3>
             <p>Não há itens cadastrados na categoria <b>{{ activeCategory }}</b>.</p>
+          </section>
+        </section>
+
+        <section v-if="hasExtraItems && filteredItems.length > 0" class="expand-section">
+          <div
+            v-if="visibleExtraItems.length > 0"
+            class="menu-grid expanded-grid"
+            role="list"
+            aria-label="Itens adicionais do cardápio"
+          >
+            <article v-for="item in visibleExtraItems" :key="item.id" class="menu-entry" role="listitem">
+              <MenuCard
+                :item="item"
+                @remove-item="removeItem"
+              />
+            </article>
           </div>
+
+          <button type="button" class="btn-show-more" @click="toggleMoreItems">
+            {{ showMoreItems ? 'Mostrar menos' : `Mostrar mais (${extraItems.length})` }}
+          </button>
         </section>
       </div>
     </main>
@@ -118,12 +251,60 @@ const stats = computed(() => {
   flex-direction: column;
 }
 
-.hero {
-  padding: 4rem 0 6rem 0;
-  background: linear-gradient(to bottom, rgba(15, 23, 42, 0.4), rgba(15, 23, 42, 0.1));
-  backdrop-filter: blur(4px);
-  margin-bottom: -3rem;
-  z-index: -1;
+.site-header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: rgba(15, 23, 42, 0.78);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--card-border);
+}
+
+.nav-shell {
+  min-height: 68px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.brand {
+  text-decoration: none;
+  color: var(--text-primary);
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+.main-nav {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.main-nav a {
+  text-decoration: none;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  font-weight: 600;
+  padding: 0.45rem 0.9rem;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  transition: all 0.25s ease;
+}
+
+.main-nav a:hover {
+  color: var(--text-primary);
+  border-color: var(--card-border);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.hero-section {
+  padding: 3.75rem 0 4.5rem 0;
+  background:
+    radial-gradient(circle at 10% 10%, rgba(245, 158, 11, 0.16), transparent 45%),
+    radial-gradient(circle at 90% 20%, rgba(59, 130, 246, 0.14), transparent 42%),
+    linear-gradient(to bottom, rgba(15, 23, 42, 0.5), rgba(15, 23, 42, 0.12));
+  margin-bottom: 2rem;
 }
 
 .title-section {
@@ -152,7 +333,7 @@ h1 {
   -webkit-text-fill-color: transparent;
 }
 
-.hero p {
+.hero-section p {
   font-size: 1.1rem;
   color: var(--text-secondary);
   max-width: 600px;
@@ -166,10 +347,85 @@ h1 {
   align-items: flex-start;
 }
 
+.content-header {
+  margin-bottom: 1rem;
+}
+
+.content-header h2 {
+  font-size: 1.55rem;
+  color: var(--text-primary);
+  margin-bottom: 0.2rem;
+}
+
+.content-header p {
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+}
+
+.filter-nav {
+  margin-bottom: 0.25rem;
+}
+
 .menu-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 2rem;
+}
+
+.preview-grid {
+  align-content: start;
+}
+
+.preview-entry {
+  height: var(--preview-card-height, 220px);
+  min-height: 0;
+}
+
+.preview-entry :deep(.menu-card) {
+  height: 100%;
+  min-height: 100%;
+}
+
+.menu-entry {
+  min-width: 0;
+}
+
+.expand-section {
+  grid-column: 1 / -1;
+  margin-top: 1rem;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.btn-show-more {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 44px;
+  margin-top: 0.9rem;
+  padding: 0.65rem 1.2rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: 0.92rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+
+.btn-show-more:hover {
+  transform: translateY(-1px);
+  border-color: rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.expanded-grid {
+  margin-top: 1rem;
+  width: 100%;
 }
 
 .empty-state {
@@ -202,10 +458,29 @@ h1 {
   border-top: 1px solid var(--card-border);
 }
 
+#inicio,
+#resumo,
+#cadastro,
+#catalogo {
+  scroll-margin-top: 92px;
+}
+
 .footer-content {
   text-align: center;
   color: var(--text-secondary);
   font-size: 0.9rem;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 @media (max-width: 1024px) {
@@ -218,15 +493,37 @@ h1 {
     margin: 0 auto;
     width: 100%;
   }
+
+  .preview-entry {
+    height: 220px;
+  }
 }
 
 @media (max-width: 768px) {
+  .nav-shell {
+    min-height: auto;
+    padding: 0.8rem 0;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .main-nav {
+    flex-wrap: wrap;
+  }
+
   h1 {
     font-size: 2.5rem;
   }
   
-  .hero {
-    padding: 3rem 0 4rem 0;
+  .hero-section {
+    padding: 2.5rem 0 3.2rem 0;
+  }
+
+  #inicio,
+  #resumo,
+  #cadastro,
+  #catalogo {
+    scroll-margin-top: 122px;
   }
 }
 </style>
