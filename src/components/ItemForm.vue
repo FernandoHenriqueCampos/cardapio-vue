@@ -39,7 +39,7 @@ const submitForm = () => {
       </div>
       <div class="input-group">
         <label for="price">Preço (R$)</label>
-        <input v-model.number="price" type="number" id="price" step="0.01" min="0" required />
+        <input v-model.number="price" type="number" id="price" step="0.1" min="0" max="1000" required />
       </div>
       <div class="input-group">
         <label for="category">Categoria</label>
@@ -68,17 +68,21 @@ const submitForm = () => {
 
 <style scoped>
 .item-form {
+  min-height: var(--item-form-target-height, auto);
   padding: 2rem;
   border-radius: 20px;
   background: var(--card-bg);
   backdrop-filter: blur(12px);
   border: 1px solid var(--card-border);
-  margin-bottom: 3rem;
+  margin-bottom: 1rem;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  row-gap: 3rem;
 }
 
 h3 {
-  margin-bottom: 1.5rem;
+  margin-bottom: 0;
   font-size: 1.5rem;
   background: var(--primary-gradient);
   -webkit-background-clip: text;
@@ -87,9 +91,10 @@ h3 {
 
 .form-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 1.5rem;
-  margin-bottom: 2rem;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+  margin-bottom: 0;
+  align-content: space-between;
 }
 
 .input-group {
@@ -105,12 +110,16 @@ label {
 }
 
 input[type="text"], input[type="number"], select {
+  width: 100%;
+  min-height: 46px;
   padding: 0.8rem 1rem;
   border-radius: 12px;
   background: rgba(15, 23, 42, 0.6);
   border: 1px solid var(--card-border);
   color: var(--text-primary);
   font-size: 1rem;
+  line-height: 1.2;
+  box-sizing: border-box;
   transition: all 0.3s ease;
 }
 
@@ -184,6 +193,7 @@ input:checked + .slider:before {
 
 .btn-primary {
   width: 100%;
+  margin-top: 0;
   padding: 1rem;
   border-radius: 12px;
   border: none;
@@ -203,5 +213,11 @@ input:checked + .slider:before {
 
 .btn-primary:active {
   transform: translateY(0);
+}
+
+@media (max-width: 1024px) {
+  .item-form {
+    min-height: auto;
+  }
 }
 </style>
