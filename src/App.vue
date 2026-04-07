@@ -154,7 +154,6 @@ watch(filteredItems, () => {
         <nav class="main-nav" aria-label="Navegação principal">
           <a href="#resumo">Resumo</a>
           <a href="#cadastro">Cadastro</a>
-          <a href="#catalogo">Cardápio</a>
         </nav>
       </div>
     </header>
