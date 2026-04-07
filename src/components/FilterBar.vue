@@ -37,14 +37,20 @@ const categoryColor = (cat) => {
 .filter-bar {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 1rem 2rem;
+  justify-content: flex-start;
+  gap: 1.1rem;
+  padding: 1rem 1.5rem;
   border-radius: 60px;
   background: var(--card-bg);
   backdrop-filter: blur(12px);
   border: 1px solid var(--card-border);
   margin-bottom: 2rem;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+}
+
+.filter-header {
+  display: flex;
+  align-items: center;
 }
 
 .filter-header .label {
@@ -58,6 +64,8 @@ const categoryColor = (cat) => {
 .filter-options {
   display: flex;
   gap: 0.75rem;
+  flex-wrap: wrap;
+  align-items: center;
 }
 
 .filter-btn {

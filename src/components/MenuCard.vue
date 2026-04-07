@@ -4,9 +4,33 @@ import { computed } from 'vue';
 const props = defineProps(['item']);
 const emit = defineEmits(['remove-item']);
 
-const formatPrice = (price) => {
-  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(price);
+const HIGH_PRICE_THRESHOLD = 100000;
+
+const formatPrice = (price, compact = false) => {
+  return new Intl.NumberFormat('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
+    notation: compact ? 'compact' : 'standard',
+    maximumFractionDigits: compact ? 1 : 2,
+    minimumFractionDigits: compact ? 0 : 2
+  }).format(price);
 };
+
+const isHighPrice = computed(() => Number(props.item.price) >= HIGH_PRICE_THRESHOLD);
+const formattedPrice = computed(() => formatPrice(props.item.price, isHighPrice.value));
+const stockQuantity = computed(() => {
+  const rawStock = props.item.available;
+
+  if (typeof rawStock === 'boolean') {
+    return rawStock ? 1 : 0;
+  }
+
+  const parsedStock = Number(rawStock);
+  return Number.isFinite(parsedStock) && parsedStock > 0 ? Math.floor(parsedStock) : 0;
+});
+
+const isAvailable = computed(() => stockQuantity.value > 0);
+const availabilityText = computed(() => (isAvailable.value ? 'Disponível' : 'Esgotado'));
 
 const categoryIcon = computed(() => {
   switch (props.item.category) {
@@ -28,7 +52,7 @@ const categoryColor = computed(() => {
 </script>
 
 <template>
-  <div class="menu-card glass fade-in" :class="{ 'unavailable': !item.available }">
+  <div class="menu-card glass fade-in" :class="{ 'unavailable': !isAvailable }">
     <div class="card-header">
       <div class="icon-wrapper" :style="{ background: categoryColor }">
         {{ categoryIcon }}
@@ -42,11 +66,15 @@ const categoryColor = computed(() => {
     <div class="card-body">
       <div class="price-info">
         <span class="label">Preço</span>
-        <span class="price">{{ formatPrice(item.price) }}</span>
+        <span class="price" :class="{ compact: isHighPrice }">{{ formattedPrice }}</span>
       </div>
-      <div class="status-indicator">
-        <span :class="item.available ? 'dot available' : 'dot unavailable'"></span>
-        <span>{{ item.available ? 'Disponível' : 'Esgotado' }}</span>
+
+      <div class="status-stock">
+        <div class="status-indicator">
+          <span :class="isAvailable ? 'dot available' : 'dot unavailable'"></span>
+          <span>{{ availabilityText }}</span>
+        </div>
+        <span class="stock-count">Estoque: {{ stockQuantity }}</span>
       </div>
     </div>
 
@@ -69,9 +97,10 @@ const categoryColor = computed(() => {
   transition: all 0.3s ease;
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  gap: 0.5rem;
   position: relative;
   overflow: hidden;
+  min-height: 220px;
 }
 
 .menu-card:hover {
@@ -90,27 +119,50 @@ const categoryColor = computed(() => {
 }
 
 .card-header {
-  display: flex;
-  align-items: flex-start;
+  display: grid;
+  grid-template-columns: 64px 1fr;
+  align-items: start;
   gap: 1rem;
+  min-height: 64px;
 }
 
 .icon-wrapper {
-  padding: 1rem;
+  width: 64px;
+  height: 64px;
   border-radius: 14px;
   font-size: 1.5rem;
   box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+  display: grid;
+  place-items: center;
+}
+
+.header-info {
+  height: 64px;
+  display: grid;
+  grid-template-rows: 1fr auto;
+  row-gap: 0.15rem;
 }
 
 .header-info h3 {
-  font-size: 1.25rem;
+  font-size: 1.2rem;
   font-weight: 700;
   color: var(--text-primary);
-  margin-bottom: 0.25rem;
+  margin: 0;
+  line-height: 1.22;
+  min-height: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .category-badge {
-  padding: 0.15rem 0.6rem;
+  display: inline-flex;
+  align-items: center;
+  height: 20px;
+  width: fit-content;
+  padding: 0.1rem 0.55rem;
   border-radius: 30px;
   font-size: 0.75rem;
   font-weight: 600;
@@ -119,14 +171,16 @@ const categoryColor = computed(() => {
 }
 
 .card-body {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: end;
+  min-height: 44px;
 }
 
 .price-info {
   display: flex;
   flex-direction: column;
+  min-width: 0;
 }
 
 .price-info .label {
@@ -138,13 +192,40 @@ const categoryColor = computed(() => {
   font-size: 1.4rem;
   font-weight: 700;
   color: #10b981;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.price-info .price.compact {
+  font-size: 1.2rem;
+}
+
+.status-stock {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.1rem;
+  align-self: end;
 }
 
 .status-indicator {
   display: flex;
   align-items: center;
+  justify-content: flex-end;
   gap: 0.5rem;
   font-size: 0.85rem;
+  min-width: 110px;
+  white-space: nowrap;
+}
+
+.stock-count {
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
 }
 
 .dot {
@@ -163,9 +244,13 @@ const categoryColor = computed(() => {
   box-shadow: 0 0 10px rgba(239, 68, 68, 0.5);
 }
 
+.card-footer {
+  margin-top: auto;
+}
+
 .btn-remove {
   width: 100%;
-  padding: 0.75rem;
+  padding: 0.65rem;
   border-radius: 12px;
   border: 1px solid rgba(239, 68, 68, 0.3);
   background: rgba(239, 68, 68, 0.1);
