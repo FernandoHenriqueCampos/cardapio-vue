@@ -101,18 +101,19 @@ const updatePreviewHeight = () => {
   const formRect = formElement?.getBoundingClientRect();
   const previewRect = previewGridRef.value.getBoundingClientRect();
   const gridWidth = previewGridRef.value.clientWidth;
-  const cardCount = previewItems.value.length;
   const cardMinWidth = 280;
   const gridGap = 32;
   const columns = Math.max(1, Math.floor((gridWidth + gridGap) / (cardMinWidth + gridGap)));
-  const rows = Math.max(1, Math.ceil(cardCount / columns));
+  const rows = Math.max(1, Math.ceil(PREVIEW_LIMIT / columns));
   const referenceBottom = formRect?.bottom ?? sidebarRect.bottom;
   const availableGridHeight = Math.max(180, referenceBottom - previewRect.top);
   const computedHeight = Math.floor((availableGridHeight - (rows - 1) * gridGap) / rows);
   const sampleCard = previewGridRef.value.querySelector('.menu-card');
-  const minCardHeight = sampleCard ? sampleCard.scrollHeight + 4 : 180;
-
-  previewCardHeight.value = Math.max(minCardHeight, computedHeight);
+  const minCardHeight = sampleCard
+    ? Number.parseFloat(getComputedStyle(sampleCard).minHeight) || 220
+    : 220;
+  const maxCardHeight = 260; // Max height to avoid overly stretched cards
+  previewCardHeight.value = Math.min(maxCardHeight, Math.max(minCardHeight, computedHeight));
 };
 
 const toggleMoreItems = () => {
@@ -330,6 +331,7 @@ h1 {
   margin-bottom: 0.5rem;
   background: linear-gradient(to right, #f8fafc, #94a3b8);
   -webkit-background-clip: text;
+  background-clip: text;
   -webkit-text-fill-color: transparent;
 }
 
@@ -343,7 +345,8 @@ h1 {
 .main-grid {
   display: grid;
   grid-template-columns: 350px 1fr;
-  gap: 3rem;
+  column-gap: 3rem;
+  row-gap: 0rem;
   align-items: flex-start;
 }
 
@@ -360,6 +363,10 @@ h1 {
 .content-header p {
   color: var(--text-secondary);
   font-size: 0.95rem;
+}
+
+.sidebar :deep(.item-form) {
+  margin-bottom: 0;
 }
 
 .filter-nav {
@@ -392,7 +399,7 @@ h1 {
 
 .expand-section {
   grid-column: 1 / -1;
-  margin-top: 1rem;
+  margin-top: 0;
   display: flex;
   flex-direction: column;
   align-items: stretch;

@@ -120,31 +120,31 @@ const categoryColor = computed(() => {
 
 .card-header {
   display: grid;
-  grid-template-columns: 64px 1fr;
+  grid-template-columns: 58px 1fr;
   align-items: start;
-  gap: 1rem;
-  min-height: 64px;
+  gap: 0.85rem;
+  min-height: 58px;
 }
 
 .icon-wrapper {
-  width: 64px;
-  height: 64px;
+  width: 58px;
+  height: 58px;
   border-radius: 14px;
-  font-size: 1.5rem;
+  font-size: 1.35rem;
   box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
   display: grid;
   place-items: center;
 }
 
 .header-info {
-  height: 64px;
+  height: 58px;
   display: grid;
   grid-template-rows: 1fr auto;
   row-gap: 0.15rem;
 }
 
 .header-info h3 {
-  font-size: 1.2rem;
+  font-size: 1.1rem;
   font-weight: 700;
   color: var(--text-primary);
   margin: 0;
@@ -174,7 +174,7 @@ const categoryColor = computed(() => {
   display: grid;
   grid-template-columns: 1fr auto;
   align-items: end;
-  min-height: 44px;
+  min-height: 40px;
 }
 
 .price-info {
@@ -189,7 +189,7 @@ const categoryColor = computed(() => {
 }
 
 .price-info .price {
-  font-size: 1.4rem;
+  font-size: 1.28rem;
   font-weight: 700;
   color: #10b981;
   line-height: 1.2;
@@ -246,11 +246,13 @@ const categoryColor = computed(() => {
 
 .card-footer {
   margin-top: auto;
+  margin-bottom: 0.15rem;
 }
 
 .btn-remove {
   width: 100%;
-  padding: 0.65rem;
+  padding: 0.45rem;
+  margin-top: 4px;
   border-radius: 12px;
   border: 1px solid rgba(239, 68, 68, 0.3);
   background: rgba(239, 68, 68, 0.1);

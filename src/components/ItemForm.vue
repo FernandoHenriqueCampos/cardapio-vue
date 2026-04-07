@@ -82,6 +82,7 @@ h3 {
   font-size: 1.5rem;
   background: var(--primary-gradient);
   -webkit-background-clip: text;
+  background-clip: text;
   -webkit-text-fill-color: transparent;
 }
 
